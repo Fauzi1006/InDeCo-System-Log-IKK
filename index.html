@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InDeCo - Integrated Delivery Control System</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- 1. THEME VARIABLES --- */
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            
+            /* Sidebar & Header Colors */
+            --sidebar-bg: #0f172a; 
+            --sidebar-hover: #1e293b;
+            --sidebar-active: #2563eb;
+            --header-bg: #0f172a; 
+            
+            --header-height: 64px;
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 70px;
+            --footer-height: 40px;
+
+            /* Text Colors */
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --text-light: #f8fafc;
+
+            /* Status Colors */
+            --color-primary: #2563eb;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+
+            /* Table Themes */
+            --blue-header: #172554; --blue-row: #eff6ff;
+            --orange-header: #9a3412; --orange-row: #fff7ed;
+            --green-header: #064e3b; --green-row: #f0fdf4;
+            --dark-header: #0f172a; --dark-row: #f8fafc;
+        }
+
+        /* --- 2. GLOBAL RESET --- */
+        * { box-sizing: border-box; outline: none; }
+        body { 
+            margin: 0; 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-body); 
+            color: var(--text-main); 
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* WRAPPER FOR DASHBOARD APP (Hidden by default until login) */
+        #app-container {
+            display: none; /* Initially hidden */
+            min-height: 100vh;
+        }
+        #app-container.active {
+            display: flex;
+        }
+
+        /* --- LOGIN PAGE STYLES --- */
+        /* PERBAIKAN 2: display: none (bukan flex) agar tidak kedip saat refresh */
+        #login-page {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            z-index: 9999;
+            display: none; /* Default HIDDEN untuk mencegah flicker */
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 1; /* Ensure opacity starts at 1 */
+            transition: opacity 0.5s ease;
+        }
+
+        .login-card {
+            background: white;
+            width: 900px;
+            max-width: 100%;
+            height: 550px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            display: flex;
+            overflow: hidden;
+        }
+
+        .login-visual {
+            flex: 1;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .truck-illustration {
+            display: flex;
+            align-items: flex-end;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .truck-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0.8;
+            transition: transform 0.3s;
+        }
+        .truck-item:hover { transform: translateY(-5px); opacity: 1; }
+        .truck-item i { font-size: 2.5rem; color: #334155; margin-bottom: 5px; }
+        .truck-item span { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+        .login-form-container {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .login-logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .custom-logo-svg { width: 40px; height: 40px; }
+        .app-title-login { font-size: 1.5rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 8px; display: block; }
+        .form-input { 
+            width: 100%; padding: 12px 15px; border: 2px solid #e2e8f0; 
+            border-radius: 8px; font-size: 0.9rem; transition: 0.3s; 
+        }
+        .form-input:focus { border-color: var(--color-primary); }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+        .btn-login:hover { background: #1d4ed8; transform: translateY(-2px); }
+        .login-footer { margin-top: auto; text-align: center; font-size: 0.75rem; color: #94a3b8; padding-top: 20px; }
+
+        @media (max-width: 768px) {
+            .login-card { flex-direction: column; height: auto; }
+            .login-visual { display: none; }
+            .login-form-container { padding: 30px; }
+        }
+
+        /* --- 3. SIDEBAR --- */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background: var(--sidebar-bg); 
+            color: var(--text-light); 
+            position: fixed; 
+            left: 0; top: 0; bottom: 0; 
+            z-index: 1000; 
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; 
+            flex-direction: column;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        .sidebar-brand { 
+            height: var(--header-height); 
+            display: flex; 
+            align-items: center; 
+            padding: 0 1.5rem; 
+            font-weight: 800; 
+            font-size: 1.2rem; 
+            letter-spacing: 0.5px;
+            color: white;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap;
+            background: rgba(0,0,0,0.2); 
+        }
+        .brand-icon-svg { width: 30px; height: 30px; margin-right: 12px; }
+        .sidebar-menu { flex: 1; padding-top: 1rem; overflow-y: auto; }
+        .sidebar-menu::-webkit-scrollbar { width: 4px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #334155; }
+        .menu-label { padding: 1rem 1.5rem 0.5rem; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+        .nav-item { 
+            display: flex; align-items: center; padding: 0.85rem 1.5rem; color: #94a3b8; 
+            text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; 
+            border-left: 3px solid transparent; cursor: pointer; white-space: nowrap;
+        }
+        .nav-item i { width: 24px; text-align: center; margin-right: 12px; font-size: 1rem; }
+        .nav-item:hover { color: white; background: var(--sidebar-hover); }
+        .nav-item.active { background: rgba(37, 99, 235, 0.1); color: #60a5fa; border-left-color: var(--color-primary); }
+
+        body.sidebar-hidden .sidebar { width: var(--sidebar-collapsed-width); }
+        body.sidebar-hidden .sidebar-brand span, 
+        body.sidebar-hidden .menu-label,
+        body.sidebar-hidden .nav-item span { display: none; opacity: 0; }
+        body.sidebar-hidden .nav-item { padding: 0.85rem 0; justify-content: center; }
+        body.sidebar-hidden .nav-item i { margin-right: 0; font-size: 1.2rem; }
+        body.sidebar-hidden .sidebar-brand { justify-content: center; padding: 0; }
+        body.sidebar-hidden .sidebar-brand .brand-icon-svg { margin: 0; }
+
+        body.sidebar-hidden .nav-item:hover::after {
+            content: attr(data-tooltip);
+            position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+            background: #1e293b; color: white; padding: 6px 10px; border-radius: 4px;
+            font-size: 0.75rem; white-space: nowrap; z-index: 2000; margin-left: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* --- 4. HEADER --- */
+        header { 
+            position: fixed; 
+            top: 0; right: 0; 
+            left: var(--sidebar-width); 
+            height: var(--header-height); 
+            background: var(--header-bg); 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 1.5rem; 
+            z-index: 900; 
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            justify-content: space-between; 
+        }
+        body.sidebar-hidden header { left: var(--sidebar-collapsed-width); }
+
+        .header-left { display: flex; align-items: center; }
+        .toggle-btn { 
+            background: rgba(255,255,255,0.1); 
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white; 
+            border-radius: 6px; width: 32px; height: 32px; 
+            cursor: pointer; margin-right: 15px; 
+            transition: 0.2s;
+        }
+        .toggle-btn:hover { background: rgba(255,255,255,0.2); }
+
+        .header-titles { display: flex; flex-direction: column; }
+        .header-titles h1 { font-size: 1rem; margin: 0; font-weight: 700; letter-spacing: 0.5px; color: white; }
+        .header-titles h2 { font-size: 0.75rem; margin: 0; color: #94a3b8; font-weight: 400; }
+
+        .header-right { margin-left: auto; display: flex; align-items: center; }
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-logout:hover { background: #ef4444; color: white; }
+
+        /* --- 5. MAIN CONTENT & FOOTER --- */
+        .main-content { 
+            margin-left: var(--sidebar-width); 
+            padding: calc(var(--header-height) + 20px) 20px calc(var(--footer-height) + 20px); 
+            flex-grow: 1; 
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            width: 100%;
+        }
+        body.sidebar-hidden .main-content { margin-left: var(--sidebar-collapsed-width); }
+
+        footer { 
+            position: fixed; 
+            bottom: 0; right: 0; 
+            left: var(--sidebar-width); 
+            height: var(--footer-height);
+            background: white; 
+            border-top: 1px solid #e2e8f0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; color: #64748b; 
+            z-index: 950;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body.sidebar-hidden footer { left: var(--sidebar-collapsed-width); }
+
+        /* --- 6. STATS & ICONS --- */
+        .dash-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .dash-stat-card { 
+            background: white; padding: 20px; border-radius: 12px; 
+            box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; 
+            position: relative; overflow: hidden; height: 120px; 
+            display: flex; flex-direction: column; justify-content: space-between;
+            transition: transform 0.2s;
+        }
+        .dash-stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+        .dash-stat-card .icon-bg { position: absolute; right: -5px; top: -5px; font-size: 4.5rem; opacity: 0.25; }
+        
+        .dsc-green { border-bottom: 4px solid #22c55e; } .dsc-green .icon-bg { color: #22c55e; } .dsc-green .dash-stat-value { color: #15803d; }
+        .dsc-blue { border-bottom: 4px solid #3b82f6; } .dsc-blue .icon-bg { color: #3b82f6; } .dsc-blue .dash-stat-value { color: #1d4ed8; }
+        .dsc-orange { border-bottom: 4px solid #f97316; } .dsc-orange .icon-bg { color: #f97316; } .dsc-orange .dash-stat-value { color: #c2410c; }
+        .dsc-purple { border-bottom: 4px solid #a855f7; } .dsc-purple .icon-bg { color: #a855f7; } .dsc-purple .dash-stat-value { color: #7e22ce; }
+
+        .dash-stat-title { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 5px; position: relative; z-index: 2; }
+        .dash-stat-value { font-size: 1.8rem; font-weight: 800; position: relative; z-index: 2; }
+
+        /* ================================================================= */
+        /* --- 7. TABLE STYLES --- */
+        /* ================================================================= */
+        
+        .table-responsive { 
+            width: 100%; 
+            overflow-x: hidden;
+            border: 1px solid #334155; 
+            background: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .main-data-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: fixed; 
+        }
+
+        .main-data-table th, 
+        .main-data-table td { 
+            padding: 6px 4px; 
+            border: 2px solid #cbd5e1;
+            font-size: 0.7rem; 
+            text-align: center !important; 
+            vertical-align: middle !important; 
+            white-space: normal !important; 
+            word-wrap: break-word !important; 
+            overflow-wrap: break-word !important;
+            line-height: 1.2;
+        }
+
+        .main-data-table th { 
+            background: #0f172a !important; 
+            color: #ffffff !important; 
+            text-transform: uppercase;
+            font-weight: 700;
+            border: 2px solid #334155 !important;
+            height: 40px;
+        }
+
+        /* --- PENGATURAN LEBAR KOLOM (TOTAL 100%) --- */
+        .main-data-table th:nth-child(1), .main-data-table td:nth-child(1) { width: 3%; }  /* Check */
+        .main-data-table th:nth-child(2), .main-data-table td:nth-child(2) { width: 3%; }  /* No */
+        .main-data-table th:nth-child(13), .main-data-table td:nth-child(13) { width: 4%; } /* Ket */
+        .main-data-table th:last-child, .main-data-table td:last-child { width: 4%; }      /* Edit */
+
+        .main-data-table th:nth-child(3), .main-data-table td:nth-child(3) { width: 10%; font-weight: bold; color: #2563eb; } /* No DN */
+        .main-data-table th:nth-child(4), .main-data-table td:nth-child(4) { width: 7%; }  /* No SN */
+        .main-data-table th:nth-child(5), .main-data-table td:nth-child(5) { width: 7%; }  /* Plan Date */
+
+        .main-data-table th:nth-child(6), .main-data-table td:nth-child(6) { width: 9%; }  /* Vendor */
+        .main-data-table th:nth-child(7), .main-data-table td:nth-child(7) { width: 6%; }  /* Armada */
+        .main-data-table th:nth-child(8), .main-data-table td:nth-child(8) { width: 8%; }  /* Area */
+        .main-data-table th:nth-child(9), .main-data-table td:nth-child(9) { width: 7%; }  /* Kota */
+
+        .main-data-table th:nth-child(10), .main-data-table td:nth-child(10) { width: 11%; } /* Customer */
+        .main-data-table th:nth-child(12), .main-data-table td:nth-child(12) { width: 9%; }  /* Catatan */
+
+        .main-data-table th:nth-child(11), .main-data-table td:nth-child(11) { width: 6%; } /* Qty */
+        .main-data-table th:nth-child(14), .main-data-table td:nth-child(14) { width: 6%; } /* Status */
+        .main-data-table th:nth-child(15), .main-data-table td:nth-child(15) { width: 6%; } /* Action */
+
+        /* Sticky Header */
+        .main-data-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .status-pill { 
+            padding: 4px 10px; 
+            border-radius: 12px; 
+            font-size: 0.65rem; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            display: inline-block; 
+            text-align: center; 
+            /* PERBAIKAN 1: Default nowrap, di-override khusus untuk BELUM MASUK */
+            white-space: nowrap; 
+        }
+
+        /* PERBAIKAN 1: Khusus Status Planning (BELUM MASUK) 
+           Menggunakan word-spacing besar untuk memaksa kata 'BELUM' dan 'MASUK'
+           terpisah baris (vertikal) di dalam tabel yang sempit
+        */
+        .status-planning { 
+            background: #dbeafe; 
+            color: #1e40af; 
+            border: 1px solid #93c5fd; 
+            white-space: normal !important; /* Izinkan wrapping */
+            word-spacing: 100vw; /* Trik agar "BELUM" & "MASUK" selalu terpisah baris */
+            line-height: 1.1;
+            padding: 6px 4px;
+        }
+
+        .status-gatein { background: #fef08a; color: #854d0e; border: 1px solid #facc15; }
+        .status-cancelled { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+        .col-number { 
+            text-align: center !important; 
+            font-weight: 800 !important; 
+            color: #0f172a;
+        }
+        
+        .main-data-table tr:hover td { background-color: #e2e8f0; }
+        .main-data-table tr:nth-child(even) { background-color: #f8fafc; }
+
+        .main-data-table .btn, .main-data-table .btn-action {
+            margin: 0 auto; 
+            display: inline-flex;
+        }
+
+        /* --- 8. COMPONENTS --- */
+        .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; }
+        .dash-charts-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .chart-box { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); min-height: 400px; display: flex; flex-direction: column; }
+        .chart-full-width { grid-column: 1 / -1; min-height: 450px; }
+        .chart-title { font-size: 0.85rem; font-weight: 700; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+        .canvas-wrapper { flex: 1; position: relative; width: 100%; }
+
+        input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; background: #fff; }
+        label { font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 4px; display: block; }
+
+        .btn { padding: 8px 14px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-transform: uppercase; }
+        .btn:hover { transform: translateY(-1px); opacity: 0.9; }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-white { background: white; border: 1px solid #cbd5e1; color: #334155; }
+        .btn-pro-save { background: #334155; color: white; }
+        .btn-pro-excel { background: #059669; color: white; }
+        .btn-pro-reset { background: #dc2626; color: white; }
+        .btn-action { width: 26px; height: 26px; border-radius: 4px; border:none; color:white; cursor:pointer; }
+        .btn-edit { background: var(--color-primary); }
+
+        .dash-filter-bar, .analysis-control-bar, .history-controls { background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 20px; }
+
+        /* Analysis Tables */
+        .gap-container-flex { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .gap-table-box { flex: 1; min-width: 300px; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+        .analysis-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+        .analysis-table th, .analysis-table td { padding: 6px; text-align: center; border: 1px solid #e2e8f0; }
+        
+        .table-header-title { padding: 10px; margin: 0; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: white !important; }
+        
+        .theme-blue .table-header-title { background: #172554; } .theme-blue th { background: var(--blue-header); color:white; }
+        .theme-orange .table-header-title { background: #7c2d12; } .theme-orange th { background: var(--orange-header); color:white; }
+        .theme-green .table-header-title { background: #14532d; } .theme-green th { background: var(--green-header); color:white; }
+        .theme-dark .table-header-title { background: #1e293b; color: white; } .theme-dark th { background: var(--dark-header); color:white; }
+
+        .gap-alert { background-color: #fee2e2 !important; color: #dc2626 !important; font-weight: 800; }
+        
+        /* Top Stats Bar */
+        .top-stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .stat-truck-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm); }
+        .truck-icon { font-size: 1.8rem; opacity: 0.8; }
+        .stat-info h3 { font-size: 0.6rem; color: #64748b; margin: 0 0 2px 0; font-weight: 700; text-transform: uppercase; }
+        .stat-info p { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0; }
+
+        /* --- 9. MODALS --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; padding: 25px; border-radius: 12px; width: 500px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 5px solid var(--color-primary); }
+
+        .status-buttons-container { display: flex; gap: 15px; margin-top: 25px; justify-content: center; }
+        .btn-status-opt { flex: 1; padding: 15px 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: 800; font-size: 0.85rem; color: white; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+        .btn-opt-plan { background: #1e3a8a; } .btn-opt-plan:hover { background: #1e40af; transform: translateY(-2px); }
+        .btn-opt-gatein { background: #facc15; color: #713f12; } .btn-opt-gatein:hover { background: #fde047; transform: translateY(-2px); }
+        .btn-opt-cancel { background: #ef4444; } .btn-opt-cancel:hover { background: #dc2626; transform: translateY(-2px); }
+
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .text-outstanding { color: #c2410c; font-size: 0.65rem; font-style: italic; font-weight: 600; display: block; margin-top:2px;}
+        
+        @media (max-width: 768px) {
+            :root { --sidebar-collapsed-width: 0px; }
+            body:not(.sidebar-hidden) .sidebar { width: 100%; max-width: 280px; }
+            header { left: 0 !important; }
+            .main-content { margin-left: 0 !important; padding: calc(var(--header-height) + 15px) 15px calc(var(--footer-height) + 15px); }
+            footer { left: 0 !important; }
+            .dash-stats-grid, .top-stats-bar, .dash-charts-container { grid-template-columns: 1fr; }
+            .form-grid-mobile { grid-template-columns: 1fr !important; }
+            .table-responsive { overflow-x: auto; }
+            .main-data-table { min-width: 800px; } 
+            .status-buttons-container { flex-direction: column; }
+            
+            body[data-logged-in="true"] #login-page { display: none !important; }
+        }
+    </style>
+</head>
+<body class="sidebar-hidden">
+
+    <div id="login-page">
+        <div class="login-card">
+            <div class="login-visual">
+                <div class="truck-illustration">
+                    <div class="truck-item">
+                        <i class="fa-solid fa-truck-moving"></i>
+                        <span>Tronton</span>
+                    </div>
+                    <div class="truck-item" style="transform: scale(1.1);">
+                        <i class="fa-solid fa-truck-ramp-box"></i>
+                        <span>Trailer</span>
+                    </div>
+                    <div class="truck-item">
+                        <i class="fa-solid fa-box-open"></i>
+                        <span>Cargo</span>
+                    </div>
+                </div>
+                <h2>Integrated Delivery Control</h2>
+                <p>Monitor, Plan, and Analyze Logistic Operations Efficiently.</p>
+                <div style="margin-top: 30px; display: flex; gap: 10px;">
+                    <div style="width: 40px; height: 5px; background: #3b82f6; border-radius: 2px;"></div>
+                    <div style="width: 40px; height: 5px; background: #cbd5e1; border-radius: 2px;"></div>
+                    <div style="width: 40px; height: 5px; background: #cbd5e1; border-radius: 2px;"></div>
+                </div>
+            </div>
+            <div class="login-form-container">
+                <div class="login-logo-area">
+                    <svg class="custom-logo-svg" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="14" width="7" height="12" rx="2" fill="#3b82f6"/>
+                        <rect x="11" y="8" width="7" height="18" rx="2" fill="#2563eb"/>
+                        <rect x="20" y="2" width="7" height="24" rx="2" fill="#1e40af"/>
+                    </svg>
+                    <div class="app-title-login">InDeCo System</div>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <h3 style="margin: 0 0 5px 0; color: #1e293b;">Welcome Back</h3>
+                    <span style="font-size: 0.85rem; color: #64748b;">Silahkan login untuk mengakses dashboard.</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Username / ID</label>
+                    <input type="text" class="form-input" id="login-username" placeholder="Masukkan ID User...">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" class="form-input" id="login-password" placeholder="Masukkan Password...">
+                </div>
+                
+                <button class="btn-login" onclick="attemptLogin()">
+                    <i class="fa-solid fa-right-to-bracket"></i> LOGIN
+                </button>
+
+                <div class="login-footer">
+                    &copy; 2026 Ahmad Fauzi - IKK Logistic Dept. <br> Integrated Delivery Control System v2.1
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <div class="sidebar">
+            <div class="sidebar-brand">
+                <svg class="brand-icon-svg" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="14" width="7" height="12" rx="2" fill="#3b82f6"/>
+                    <rect x="11" y="8" width="7" height="18" rx="2" fill="#2563eb"/>
+                    <rect x="20" y="2" width="7" height="24" rx="2" fill="white"/>
+                </svg>
+                <span>InDeCo System</span>
+            </div>
+            <div class="sidebar-menu">
+                <div class="menu-label">MAIN MENU</div>
+                <a onclick="showPage('dashboard', 'Executive Dashboard')" class="nav-item active" id="menu-dashboard" data-tooltip="Dashboard">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <div class="menu-label">OPERATIONS</div>
+                <a onclick="showPage('planning', 'Delivery Planning')" class="nav-item" id="menu-planning" data-tooltip="Planning">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span>Planning</span>
+                </a>
+                <a onclick="showPage('monitoring', 'Live Monitoring')" class="nav-item" id="menu-monitoring" data-tooltip="Monitoring">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                    <span>Monitoring</span>
+                </a>
+                <a onclick="showPage('analysis', 'Gap Analysis')" class="nav-item" id="menu-analysis" data-tooltip="Analysis">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Analysis</span>
+                </a>
+                <a onclick="showPage('history', 'Data History')" class="nav-item" id="menu-history" data-tooltip="History">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>History</span>
+                </a>
+                
+                <div class="menu-label">MASTER DATA</div>
+                <a onclick="showPage('route', 'Route Master')" class="nav-item" id="menu-route" data-tooltip="Routes">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    <span>Routes</span>
+                </a>
+                <a onclick="showPage('driver', 'Driver Master')" class="nav-item" id="menu-driver" data-tooltip="Drivers">
+                    <i class="fa-solid fa-id-card"></i>
+                    <span>Drivers</span>
+                </a>
+                <a onclick="showPage('vehicle', 'Vehicle Master')" class="nav-item" id="menu-vehicle" data-tooltip="Vehicles">
+                    <i class="fa-solid fa-truck-front"></i>
+                    <span>Vehicles</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <header>
+                <div class="header-left">
+                    <button class="toggle-btn" onclick="toggleSidebar()">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="header-titles">
+                        <h1>InDeCo - Integrated Delivery Control System</h1>
+                        <h2 id="sub-page-title">Executive Dashboard</h2>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn-logout" onclick="confirmLogout()">
+                        <i class="fa-solid fa-power-off"></i> <span>Keluar</span>
+                    </button>
+                </div>
+            </header>
+
+            <div id="page-dashboard" class="page active">
+                <div class="dash-filter-bar">
+                    <label style="margin:0;">PERIODE:</label>
+                    <input type="date" id="dash-start" style="width: auto;">
+                    <span style="color:#94a3b8;">s/d</span>
+                    <input type="date" id="dash-end" style="width: auto;">
+                    <button class="btn btn-primary" onclick="renderDashboard()">
+                        <i class="fa-solid fa-filter"></i> PROSES
+                    </button>
+                </div>
+                
+                <div class="dash-stats-grid">
+                    <div class="dash-stat-card dsc-green">
+                        <i class="fa-solid fa-handshake icon-bg"></i>
+                        <div>
+                            <div class="dash-stat-title">Active Vendors</div>
+                            <div class="dash-stat-value" id="d-val-vendor">0</div>
+                        </div>
+                    </div>
+                    <div class="dash-stat-card dsc-blue">
+                        <i class="fa-solid fa-weight-hanging icon-bg"></i>
+                        <div>
+                            <div class="dash-stat-title">Total Tonase (Kg)</div>
+                            <div class="dash-stat-value" id="d-val-tonase">0</div>
+                        </div>
+                    </div>
+                    <div class="dash-stat-card dsc-orange">
+                        <i class="fa-solid fa-file-invoice icon-bg"></i>
+                        <div>
+                            <div class="dash-stat-title">Total DN</div>
+                            <div class="dash-stat-value" id="d-val-dn">0</div>
+                        </div>
+                    </div>
+                    <div class="dash-stat-card dsc-purple">
+                        <i class="fa-solid fa-scale-balanced icon-bg"></i>
+                        <div>
+                            <div class="dash-stat-title">Avg Qty / DN</div>
+                            <div class="dash-stat-value" id="d-val-avg">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-charts-container">
+                    <div class="chart-box">
+                        <div class="chart-title"><i class="fa-solid fa-map"></i> Distribusi Area</div>
+                        <div class="canvas-wrapper"><canvas id="chartArea"></canvas></div>
+                    </div>
+                    <div class="chart-box">
+                        <div class="chart-title"><i class="fa-solid fa-truck"></i> Komposisi Armada</div>
+                        <div class="canvas-wrapper"><canvas id="chartArmada"></canvas></div>
+                    </div>
+                    <div class="chart-box chart-full-width">
+                        <div class="chart-title"><i class="fa-solid fa-trophy"></i> Top 5 Customer</div>
+                        <div class="canvas-wrapper"><canvas id="chartCustomer"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-planning" class="page">
+                <div class="card">
+                    <div style="border-bottom: 1px solid #e2e8f0; margin-bottom: 20px; padding-bottom: 10px;">
+                        <h3 style="margin:0; color:var(--text-main);"><i class="fa-solid fa-plus-circle"></i> Buat Planning Baru</h3>
+                    </div>
+
+                    <datalist id="list-history-vendor"></datalist>
+                    <datalist id="list-history-catatan"></datalist>
+                    <datalist id="list-area-options">
+                        <option value="JABODETABEK">
+                        <option value="JAWA TENGAH">
+                        <option value="JAWA TIMUR">
+                        <option value="LUAR PULAU">
+                        <option value="AMBIL SENDIRI">
+                    </datalist>
+
+                    <div class="form-grid-mobile" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label>Pickup Date (Wajib)</label>
+                            <input type="date" id="p-bulk-date">
+                        </div>
+                        <div>
+                            <label>Vendor / Transporter</label>
+                            <input type="text" id="p-bulk-vendor" list="list-history-vendor" placeholder="Pilih / Ketik...">
+                        </div>
+                        <div>
+                            <label>Area Tujuan</label>
+                            <input type="text" id="p-bulk-area" list="list-area-options" placeholder="Pilih Area...">
+                        </div>
+                        <div>
+                            <label>Catatan Tambahan</label>
+                            <input type="text" id="p-bulk-catatan" list="list-history-catatan" placeholder="Cth: Urgent / Next Day">
+                        </div>
+                    </div>
+                    
+                    <label>Data Excel (Copy dari Excel kolom DN s/d Ket, lalu Paste di sini)</label>
+                    <textarea id="p-bulk-data" style="height: 200px; margin-bottom: 15px;" placeholder="Paste data excel di sini..."></textarea>
+                    
+                    <div style="text-align: right;">
+                        <button class="btn btn-primary" onclick="processBulkPlanning()">
+                            <i class="fa-solid fa-rocket"></i> SUBMIT PLANNING
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-monitoring" class="page">
+                <div class="top-stats-bar">
+                    <div class="stat-truck-card" style="border-left: 4px solid #3b82f6;">
+                        <i class="fa-solid fa-list-check truck-icon" style="color:#3b82f6;"></i>
+                        <div class="stat-info"><h3>Total Planning</h3><p id="s-total">0</p></div>
+                    </div>
+                    <div class="stat-truck-card" style="border-left: 4px solid #1e293b;">
+                        <i class="fa-solid fa-truck-arrow-right truck-icon" style="color:#1e293b;"></i>
+                        <div class="stat-info"><h3>Belum Masuk</h3><p id="s-planning">0</p></div>
+                    </div>
+                    <div class="stat-truck-card" style="border-left: 4px solid #10b981;">
+                        <i class="fa-solid fa-check-circle truck-icon" style="color:#10b981;"></i>
+                        <div class="stat-info"><h3>Gate In</h3><p id="s-gatein">0</p></div>
+                    </div>
+                    <div class="stat-truck-card" style="border-left: 4px solid #ef4444;">
+                        <i class="fa-solid fa-ban truck-icon" style="color:#ef4444;"></i>
+                        <div class="stat-info"><h3>Cancel</h3><p id="s-cancelled">0</p></div>
+                    </div>
+                    <div class="stat-truck-card" style="border-left: 4px solid #f59e0b;">
+                        <i class="fa-solid fa-scale-unbalanced truck-icon" style="color:#f59e0b;"></i>
+                        <div class="stat-info"><h3>Tonase (Kg)</h3><p id="s-tonase">0</p></div>
+                    </div>
+                </div>
+
+                <div class="analysis-control-bar" style="justify-content: space-between;">
+                    <div style="display:flex; gap:10px; flex: 1;">
+                        <input type="text" id="monSearch" class="input-search" placeholder="🔍 Cari DN, Customer, Nopol..." onkeyup="updateMonitoring()" style="flex:1;">
+                        <select id="filterStatus" onchange="updateMonitoring()" style="width: auto; min-width: 120px;">
+                            <option value="">SEMUA STATUS</option>
+                            <option value="Belum Masuk">BELUM MASUK</option>
+                            <option value="Gate In">GATE IN</option>
+                            <option value="Cancelled">CANCELLED</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <div style="background: #fff7ed; padding: 5px 10px; border:1px solid #fed7aa; border-radius: 6px; display:flex; gap:5px; align-items: center;">
+                            <span style="font-size: 0.7rem; font-weight:700; color:#c2410c;">PINDAH TGL:</span>
+                            <input type="date" id="bulk-move-date" style="padding: 2px 5px; width: 110px;">
+                            <button class="btn btn-primary" onclick="processBulkMoveDate()" style="padding: 2px 8px; font-size: 0.7rem;">GO</button>
+                        </div>
+
+                        <button class="btn btn-white" onclick="exportTableToImage()"><i class="fa-solid fa-camera"></i> IMG</button>
+                        <button class="btn btn-pro-excel" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> XLS</button>
+                        <button class="btn btn-pro-reset" onclick="bulkDeleteMonitoring()"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="main-data-table" id="dn-table-excel">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="check-all" onclick="toggleAllChecks()"></th>
+                                <th>No</th>
+                                <th>No DN</th>
+                                <th>No SN</th>
+                                <th>Plan Date</th>
+                                <th>Vendor</th>
+                                <th>Armada</th>
+                                <th>Area</th>
+                                <th>Kota</th>
+                                <th>Customer</th>
+                                <th>Qty (Kg)</th>
+                                <th>Catatan</th>
+                                <th>Outs</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                                <th>Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="page-analysis" class="page">
+                <div class="analysis-control-bar">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="margin:0;">TANGGAL ANALISA:</label>
+                        <input type="date" id="analysis-date" onchange="updateAnalysis()" style="width: auto; font-weight: 600;">
+                    </div>
+                    <button class="btn btn-pro-save" onclick="exportGapImage()">
+                        <i class="fa-solid fa-download"></i> UNDUH GAMBAR REKAP
+                    </button>
+                </div>
+
+                <div id="exportAreaContainer" style="background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <h2 style="font-size: 1.2rem; color: #1e293b; margin: 0 0 20px 0; border-left: 5px solid #2563eb; padding-left: 15px;">
+                        DAILY LOGISTIC RECON <span id="analysis-date-display" style="font-weight: 400; color: #64748b; font-size: 0.9rem;"></span>
+                    </h2>
+                    
+                    <div class="gap-container-flex">
+                        <div class="gap-table-box theme-blue">
+                            <div class="table-header-title">🔵 PLAN DELIVERY </div>
+                            <table class="analysis-table">
+                                <thead><tr><th style="width:40%">AREA</th><th>PLAN</th><th>REALZ</th><th>GAP</th></tr></thead>
+                                <tbody id="body-plan-today"></tbody>
+                            </table>
+                        </div>
+                        <div class="gap-table-box theme-orange">
+                            <div class="table-header-title">🟠 CARGO NEXT DAY</div>
+                            <table class="analysis-table">
+                                <thead><tr><th style="width:40%">AREA</th><th>PLAN</th><th>REALZ</th><th>GAP</th></tr></thead>
+                                <tbody id="body-next-day"></tbody>
+                            </table>
+                        </div>
+                        <div class="gap-table-box theme-green">
+                            <div class="table-header-title">🟢 SUMMARY (TOTAL)</div>
+                            <table class="analysis-table">
+                                <thead><tr><th style="width:40%">AREA</th><th>TOTAL</th><th>REALZ</th><th>GAP</th></tr></thead>
+                                <tbody id="body-summary"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px; border-top: 2px dashed #cbd5e1; padding-top: 20px;">
+                        <div class="theme-blue" style="margin-bottom: 20px;">
+                            <div class="table-header-title">🔵 BREAKDOWN DETAIL: PLANNING </div>
+                            <div class="table-responsive">
+                                <table class="combined-table analysis-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" style="width:14%">AREA</th>
+                                            <th colspan="3">TRONTON</th>
+                                            <th colspan="3">TRAILER</th>
+                                            <th colspan="3">CONTAINER</th>
+                                            <th colspan="3">TONASE (KG)</th>
+                                        </tr>
+                                        <tr>
+                                            <th>PLAN</th><th>REALZ</th><th>GAP</th>
+                                            <th>PLAN</th><th>REALZ</th><th>GAP</th>
+                                            <th>PLAN</th><th>REALZ</th><th>GAP</th>
+                                            <th>PLAN</th><th>REALZ</th><th>GAP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="body-breakdown-today"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="theme-orange" style="margin-bottom: 20px;">
+                            <div class="table-header-title">🟠 BREAKDOWN DETAIL: NEXT DAY</div>
+                            <div class="table-responsive">
+                                <table class="combined-table analysis-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" style="width:14%">AREA</th>
+                                            <th colspan="3">TRONTON</th><th colspan="3">TRAILER</th><th colspan="3">CONTAINER</th><th colspan="3">TONASE (KG)</th>
+                                        </tr>
+                                        <tr><th>PLAN</th><th>REALZ</th><th>GAP</th><th>PLAN</th><th>REALZ</th><th>GAP</th><th>PLAN</th><th>REALZ</th><th>GAP</th><th>PLAN</th><th>REALZ</th><th>GAP</th></tr>
+                                    </thead>
+                                    <tbody id="body-breakdown-next"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="theme-green" style="margin-bottom: 20px;">
+                            <div class="table-header-title">🟢 BREAKDOWN SUMMARY (TOTAL OPS)</div>
+                            <div class="table-responsive">
+                                <table class="combined-table analysis-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" style="width:14%">AREA</th>
+                                            <th colspan="3">TRONTON</th><th colspan="3">TRAILER</th><th colspan="3">CONTAINER</th><th colspan="3">TONASE (KG)</th>
+                                        </tr>
+                                        <tr><th>PLAN</th><th>REALZ</th><th>GAP</th><th>PLAN</th><th>REALZ</th><th>GAP</th><th>PLAN</th><th>REALZ</th><th>GAP</th><th>PLAN</th><th>REALZ</th><th>GAP</th></tr>
+                                    </thead>
+                                    <tbody id="body-breakdown-summary"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="theme-dark" style="width: 300px;">
+                            <div class="table-header-title">⚫ AMBIL SENDIRI </div>
+                            <table class="analysis-table">
+                                <tbody id="body-ambil-sendiri"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-history" class="page">
+                <div class="card">
+                    <h3 style="margin-top:0; border-bottom: 1px solid #e2e8f0; padding-bottom:10px;">
+                        <i class="fa-solid fa-database"></i> Database History (Selesai/Gate In)
+                    </h3>
+                    
+                    <div class="history-controls">
+                        <div style="flex: 1; display:flex; gap:10px; flex-wrap:wrap;">
+                            <div>
+                                <label>Dari Tanggal</label>
+                                <input type="date" id="hist-start">
+                            </div>
+                            <div>
+                                <label>Sampai Tanggal</label>
+                                <input type="date" id="hist-end">
+                            </div>
+                            <div style="display:flex; align-items:end;">
+                                <button class="btn btn-primary" onclick="renderHistory()"><i class="fa-solid fa-search"></i> CARI</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:5px; align-items:end;">
+                            <button class="btn btn-pro-excel" onclick="exportHistoryExcel()"><i class="fa-solid fa-file-export"></i> EXCEL</button>
+                            <button class="btn btn-pro-reset" onclick="bulkDeleteHistory()"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <input type="text" id="histSearch" class="input-search" placeholder="Cari data history (Global Search)..." onkeyup="renderHistory()">
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="main-data-table" id="table-history-data">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" id="hist-check-all" onchange="toggleAllHistory(this)">
+                                    </th>
+                                    <th>No</th>
+                                    <th>No DN</th>
+                                    <th>No SN</th>
+                                    <th>Plan Date</th>
+                                    <th>Vendor</th>
+                                    <th>Armada</th>
+                                    <th>Area</th>
+                                    <th>Kota</th>
+                                    <th>Customer</th>
+                                    <th>Qty (Kg)</th>
+                                    <th>Catatan</th>
+                                    <th>Outs</th>
+                                    <th>Gate In Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="histTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="page-route" class="page"><div class="card"><h3>📍 Route Planning Master</h3><p>Modul dalam pengembangan.</p></div></div>
+            <div id="page-driver" class="page"><div class="card"><h3>👮 Driver Master Data</h3><p>Modul dalam pengembangan.</p></div></div>
+            <div id="page-vehicle" class="page"><div class="card"><h3>🚛 Vehicle Master Data</h3><p>Modul dalam pengembangan.</p></div></div>
+
+            <footer>
+                &copy; 2026 InDeCo System - Ahmad Fauzi IKK Logistic Dept.
+            </footer>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span style="font-weight: 700; color: #1e293b;"><i class="fa-solid fa-pen-to-square"></i> Edit Data Delivery</span>
+                <button class="btn-action" style="float: right; color:#0d2e5c; background:none;" onclick="closeEditModal()"><i class="fa-solid fa-xmark" style="font-size:1.2rem;"></i></button>
+            </div>
+            <hr style="margin: 10px 0 20px 0; border:0; border-top:1px solid #e2e8f0;">
+            <input type="hidden" id="edit-id">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom:15px;">
+                <div><label>No DN</label><input type="text" id="edit-dn"></div>
+                <div><label>No SN</label><input type="text" id="edit-sn"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom:15px;">
+                <div><label>Customer</label><input type="text" id="edit-customer"></div>
+                <div><label>Kota</label><input type="text" id="edit-city"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom:15px;">
+                <div><label>Area</label><input type="text" id="edit-area" list="list-area-options"></div>
+                <div><label>Qty (Kg)</label><input type="number" id="edit-qty"></div>
+            </div>
+            <div style="margin-bottom:15px;"><label>Transporter</label><input type="text" id="edit-vendor" list="list-history-vendor"></div>
+            <div style="margin-bottom:15px;"><label>Armada / Nopol</label><input type="text" id="edit-truck"></div>
+            <div style="margin-bottom:20px;"><label>Catatan</label><input type="text" id="edit-catatan" list="list-history-catatan"></div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-white" onclick="closeEditModal()">Batal</button>
+                <button class="btn btn-primary" onclick="saveEditData()">Simpan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="statusModalOverlay">
+        <div class="modal-box" style="width: 500px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🤔</div>
+                <h3 style="margin:0;">Update Status Unit?</h3>
+                <p style="color:#64748b; margin:5px 0;">Pilih status terbaru untuk unit ini.</p>
+            </div>
+            
+            <input type="hidden" id="status-update-id">
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem; border: 1px solid #e2e8f0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>No DN:</span> <strong id="st-dn">-</strong></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Vendor:</span> <strong id="st-vendor">-</strong></div>
+                <div style="display:flex; justify-content:space-between;"><span>Cust:</span> <strong id="st-customer">-</strong></div>
+            </div>
+
+            <div class="status-buttons-container">
+                <button class="btn-status-opt btn-opt-plan" onclick="executeStatusUpdate('Belum Masuk')">
+                    <i class="fa-solid fa-calendar" style="font-size: 1.5rem;"></i>
+                    BELUM MASUK
+                </button>
+                <button class="btn-status-opt btn-opt-gatein" onclick="executeStatusUpdate('Gate In')">
+                    <i class="fa-solid fa-check-double" style="font-size: 1.5rem;"></i>
+                    GATE IN
+                </button>
+                <button class="btn-status-opt btn-opt-cancel" onclick="executeStatusUpdate('Cancelled')">
+                    <i class="fa-solid fa-ban" style="font-size: 1.5rem;"></i>
+                    CANCEL
+                </button>
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="#" onclick="closeStatusModal()" style="color:#94a3b8; font-size:0.8rem; text-decoration:none;">Batal, jangan ubah apa-apa</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const KEY_MONITORING = 'indeco_monitoring_v2';
+        const KEY_HISTORY = 'indeco_history_v2';
+        const KEY_LOGIN_STATUS = 'indeco_login_status';
+        const KEY_LAST_PAGE = 'indeco_last_page';
+        
+        let myChartArea = null;
+        let myChartArmada = null;
+        let myChartCustomer = null;
+
+        let historyVendors = JSON.parse(localStorage.getItem('indeco_history_vendors')) || [];
+        let historyNotes = JSON.parse(localStorage.getItem('indeco_history_notes')) || [];
+
+        function formatNumber(num) { return num.toLocaleString('id-ID'); }
+        function toggleSidebar() { document.body.classList.toggle('sidebar-hidden'); }
+
+        // --- LOGIN / LOGOUT LOGIC ---
+        function attemptLogin() {
+            const u = document.getElementById('login-username').value;
+            const p = document.getElementById('login-password').value;
+            
+            if(u.trim() === "") { alert("Silahkan isi username!"); return; }
+            
+            // Simpan status login ke localStorage
+            localStorage.setItem(KEY_LOGIN_STATUS, 'true');
+            if(!localStorage.getItem(KEY_LAST_PAGE)) {
+                localStorage.setItem(KEY_LAST_PAGE, 'dashboard');
+            }
+            
+            const loginPage = document.getElementById('login-page');
+            const appContainer = document.getElementById('app-container');
+            
+            loginPage.style.opacity = '0';
+            
+            setTimeout(() => {
+                loginPage.style.display = 'none';
+                appContainer.classList.add('active');
+                
+                const today = new Date().toISOString().split('T')[0];
+                const dateInput = document.getElementById('p-bulk-date');
+                if(dateInput && !dateInput.value) dateInput.value = today;
+                
+                updateDatalists(); 
+                
+                // Load last active page
+                const lastPage = localStorage.getItem(KEY_LAST_PAGE);
+                const menu = document.getElementById('menu-' + lastPage);
+                const label = menu ? menu.getAttribute('data-tooltip') : 'Dashboard';
+                showPage(lastPage, label);
+
+            }, 500);
+        }
+
+        function confirmLogout() {
+            if(confirm("Anda yakin ingin keluar dari sistem?")) {
+                const loginPage = document.getElementById('login-page');
+                const appContainer = document.getElementById('app-container');
+                
+                // Hapus sesi
+                localStorage.removeItem(KEY_LOGIN_STATUS);
+                localStorage.removeItem(KEY_LAST_PAGE);
+                
+                appContainer.classList.remove('active');
+                loginPage.style.display = 'flex';
+                setTimeout(() => { loginPage.style.opacity = '1'; }, 50);
+                
+                document.getElementById('login-username').value = "";
+                document.getElementById('login-password').value = "";
+                
+                document.body.removeAttribute('data-logged-in');
+            }
+        }
+
+        function showPage(pageId, label) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(m => m.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            
+            const activeMenu = document.getElementById('menu-' + pageId);
+            if(activeMenu) activeMenu.classList.add('active');
+            
+            if(label) document.getElementById('sub-page-title').innerText = label;
+            
+            // SIMPAN PAGE TERAKHIR
+            localStorage.setItem(KEY_LAST_PAGE, pageId);
+            
+            if(pageId === 'dashboard') renderDashboard();
+            if(pageId === 'monitoring') updateMonitoring();
+            if(pageId === 'analysis') {
+                if(!document.getElementById('analysis-date').value) {
+                    document.getElementById('analysis-date').value = new Date().toISOString().split('T')[0];
+                }
+                updateAnalysis();
+            }
+            if(pageId === 'history') {
+                document.getElementById('hist-start').value = "";
+                document.getElementById('hist-end').value = "";
+                renderHistory();
+            }
+        }
+
+        function updateDatalists() {
+            const listVendor = document.getElementById('list-history-vendor');
+            const listCatatan = document.getElementById('list-history-catatan');
+            if(listVendor) listVendor.innerHTML = historyVendors.map(v => `<option value="${v}">`).join('');
+            if(listCatatan) listCatatan.innerHTML = historyNotes.map(n => `<option value="${n}">`).join('');
+        }
+
+        // --- DASHBOARD LOGIC ---
+        function renderDashboard() {
+            const historyData = JSON.parse(localStorage.getItem(KEY_HISTORY)) || [];
+            let start = document.getElementById('dash-start').value;
+            let end = document.getElementById('dash-end').value;
+            
+            const today = new Date();
+            if (!start) { 
+                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                start = firstDay.toISOString().split('T')[0]; 
+                document.getElementById('dash-start').value = start; 
+            }
+            if (!end) { 
+                end = today.toISOString().split('T')[0]; 
+                document.getElementById('dash-end').value = end; 
+            }
+
+            const filteredData = historyData.filter(d => d.date >= start && d.date <= end);
+
+            if (filteredData.length === 0) {
+                document.getElementById('d-val-vendor').innerText = "0";
+                document.getElementById('d-val-tonase').innerText = "0";
+                document.getElementById('d-val-dn').innerText = "0";
+                document.getElementById('d-val-avg').innerText = "0";
+                renderCharts({}, {}, []);
+                return;
+            }
+
+            const vendors = new Set();
+            let totalTonase = 0;
+            let totalDN = filteredData.length;
+            
+            filteredData.forEach(d => {
+                if(d.vendor && d.vendor !== "BELUM BOOKING") vendors.add(d.vendor.toUpperCase().trim());
+                totalTonase += (d.qty || 0);
+            });
+
+            const activeVendors = vendors.size;
+            const avgQty = totalDN > 0 ? (totalTonase / totalDN) : 0;
+
+            document.getElementById('d-val-vendor').innerText = activeVendors;
+            document.getElementById('d-val-tonase').innerText = formatNumber(Math.round(totalTonase));
+            document.getElementById('d-val-dn').innerText = formatNumber(totalDN);
+            document.getElementById('d-val-avg').innerText = formatNumber(Math.round(avgQty));
+
+            const areaCounts = {}; 
+            ["JABODETABEK", "JAWA TENGAH", "JAWA TIMUR", "LUAR PULAU", "AMBIL SENDIRI"].forEach(a => areaCounts[a] = 0);
+            filteredData.forEach(d => {
+                let areaKey = d.area;
+                if(areaCounts[areaKey] === undefined) areaCounts[areaKey] = 0;
+                areaCounts[areaKey] += 1;
+            });
+
+            const armadaCounts = { 'Tronton': 0, 'Trailer': 0, 'Container': 0, 'Lainnya': 0 };
+            filteredData.forEach(d => {
+                const type = (d.truck || "").toLowerCase();
+                if(type.includes('tronton')) armadaCounts['Tronton']++;
+                else if(type.includes('trailer')) armadaCounts['Trailer']++;
+                else if(type.includes('cont') || type.includes('20') || type.includes('40')) armadaCounts['Container']++;
+                else armadaCounts['Lainnya']++;
+            });
+
+            const custMap = {};
+            filteredData.forEach(d => {
+                const cityName = d.city ? d.city : "Unknown";
+                const customerName = d.customer ? d.customer : "Unknown"; 
+                const key = `${customerName} (${cityName})`; 
+                custMap[key] = (custMap[key] || 0) + 1; 
+            });
+
+            const sortedCust = Object.entries(custMap)
+                .sort((a, b) => b[1] - a[1]) 
+                .slice(0, 5); 
+
+            renderCharts(areaCounts, armadaCounts, sortedCust);
+        }
+
+        // --- RENDER CHARTS ---
+        function renderCharts(areaData, armadaData, custData) {
+            Chart.register(ChartDataLabels);
+            if(myChartArea) myChartArea.destroy();
+            if(myChartArmada) myChartArmada.destroy();
+            if(myChartCustomer) myChartCustomer.destroy();
+
+            // 1. Chart Area
+            const ctxArea = document.getElementById('chartArea').getContext('2d');
+            myChartArea = new Chart(ctxArea, {
+                type: 'bar',
+                data: { 
+                    labels: Object.keys(areaData), 
+                    datasets: [{ 
+                        label: 'Total DN', 
+                        data: Object.values(areaData), 
+                        backgroundColor: '#3b82f6', 
+                        borderRadius: 6,
+                        barThickness: 40
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { display: false }, 
+                        datalabels: { anchor: 'end', align: 'top', color: '#1e293b', font: { weight: 'bold', size: 12 }, formatter: Math.round } 
+                    }, 
+                    layout: { padding: { top: 25 } }, 
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                        x: { grid: { display: false } }
+                    } 
+                }
+            });
+
+            // 2. Chart Armada
+            const ctxArmada = document.getElementById('chartArmada').getContext('2d');
+            myChartArmada = new Chart(ctxArmada, {
+                type: 'doughnut',
+                data: { 
+                    labels: Object.keys(armadaData), 
+                    datasets: [{ 
+                        data: Object.values(armadaData), 
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#cbd5e1'], 
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { position: 'right', labels: { boxWidth: 15, padding: 15, font: {size: 11} } }, 
+                        datalabels: { color: '#fff', font: { weight: 'bold' }, formatter: (value) => { return value > 0 ? value : ''; } } 
+                    },
+                    cutout: '60%'
+                }
+            });
+
+            // 3. Chart Customer
+            const ctxCust = document.getElementById('chartCustomer').getContext('2d');
+            myChartCustomer = new Chart(ctxCust, {
+                type: 'bar',
+                data: { 
+                    labels: custData.map(item => item[0]), 
+                    datasets: [{ 
+                        label: 'Total DN', 
+                        data: custData.map(item => item[1]), 
+                        backgroundColor: function(context) {
+                            const chart = context.chart;
+                            const {ctx, chartArea} = chart;
+                            if (!chartArea) return null;
+                            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+                            gradient.addColorStop(0, '#2563eb');
+                            gradient.addColorStop(1, '#60a5fa');
+                            return gradient;
+                        }, 
+                        borderRadius: 5, 
+                        barPercentage: 0.6,
+                    }] 
+                },
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { display: false }, 
+                        datalabels: { 
+                            anchor: 'end', 
+                            align: 'end', 
+                            color: '#1e293b', 
+                            font: { weight: 'bold', size: 12 }, 
+                            formatter: Math.round,
+                            offset: 4
+                        } 
+                    }, 
+                    layout: { 
+                        padding: { right: 40 }
+                    }, 
+                    scales: { 
+                        x: { 
+                            beginAtZero: true, 
+                            grid: { color: '#f1f5f9' },
+                            border: { display: false }
+                        },
+                        y: {
+                            ticks: { font: { size: 11, weight: '600' }, color: '#334155', autoSkip: false },
+                            grid: { display: false },
+                            border: { display: false }
+                        }
+                    } 
+                }
+            });
+        }
+
+        // --- PLANNING & MONITORING ---
+        function processBulkPlanning() {
+            const rawData = document.getElementById('p-bulk-data').value.trim();
+            let vendorName = document.getElementById('p-bulk-vendor').value.trim() || "BELUM BOOKING";
+            let selectedArea = document.getElementById('p-bulk-area').value.trim() || "-";
+            const manualDate = document.getElementById('p-bulk-date').value;
+            const manualNote = document.getElementById('p-bulk-catatan').value; 
+
+            if(!manualDate) { alert("MOHON ISI TANGGAL PICKUP!"); return; }
+            if (!rawData) { alert("Mohon Paste data dari Excel!"); return; }
+            if (!confirm("APAKAH ANDA YAKIN AKAN MEMBUAT PLANNING DELIVERY INI?")) { return; }
+
+            if(vendorName !== "BELUM BOOKING" && !historyVendors.includes(vendorName)) {
+                historyVendors.push(vendorName); localStorage.setItem('indeco_history_vendors', JSON.stringify(historyVendors));
+            }
+            if(manualNote && !historyNotes.includes(manualNote)) {
+                historyNotes.push(manualNote); localStorage.setItem('indeco_history_notes', JSON.stringify(historyNotes));
+            }
+            updateDatalists();
+
+            const rows = rawData.split('\n');
+            let monitoringStore = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            const groups = {};
+
+            rows.forEach(row => {
+                const cols = row.split('\t');
+                if (cols.length < 5) return;
+                const dnNumber = cols[1] ? cols[1].trim() : "";
+                const snNumber = cols[3] ? cols[3].trim() : "";
+                const customer = cols[4] ? cols[4].trim() : "";
+                
+                let rawCity = (cols[5] || "").toUpperCase().replace(/KABUPATEN|KAB\.|KOTA|ADMINISTRASI/gi, "").trim();
+                const city = rawCity.split(" ")[0]; 
+                const qty = parseFloat((cols[6] || "0").replace(/,/g, "")) || 0;
+
+                const rawArmada = cols[8] ? cols[8].toUpperCase() : "";
+                let armadaType = "Lainnya";
+                if(rawArmada.includes("TRONTON")) armadaType = "TRONTON";
+                else if(rawArmada.includes("TRAILER")) armadaType = "TRAILER";
+                else if(rawArmada.includes("CDD") || rawArmada.includes("COLT")) armadaType = "CDD";
+                else if(rawArmada.includes("FUSO")) armadaType = "FUSO";
+                else if(rawArmada.includes("WING") || rawArmada.includes("BOX")) armadaType = "WINGBOX";
+                else if(rawArmada.includes("CONT") || rawArmada.includes("20") || rawArmada.includes("40")) armadaType = "CONTAINER";
+                else if(rawArmada.length > 2) armadaType = rawArmada; 
+
+                const note1 = cols[7] ? cols[7].trim() : "";
+                const note2 = cols[9] ? cols[9].trim() : "";
+                const combinedNotes = (note1 + " " + note2 + " " + manualNote).toUpperCase();
+
+                let isNextDay = combinedNotes.includes("NEXT DAY");
+                let isSelfPickup = combinedNotes.includes("AMBIL SENDIRI") || combinedNotes.includes("SELF PICKUP");
+
+                let finalNote = manualNote;
+                if (isNextDay) finalNote = finalNote ? finalNote + " (NEXT DAY)" : "NEXT DAY";
+                
+                let finalArea = selectedArea;
+                if (isSelfPickup) { finalNote = "AMBIL SENDIRI"; finalArea = "AMBIL SENDIRI"; }
+
+                const gbMatch = note1.match(/GB\s*(\d+)/i);
+                let groupKey = gbMatch ? `GB${gbMatch[1]}_${customer.replace(/\s+/g, '').toUpperCase()}_${snNumber.replace(/\s+/g, '')}_${manualDate}` : `S_${Date.now()}_${Math.random()}`;
+
+                if (!groups[groupKey]) {
+                    groups[groupKey] = {
+                        id: Date.now() + Math.random(), dns: dnNumber, sn: snNumber, date: manualDate,
+                        vendor: vendorName, truck: armadaType, area: finalArea, city: city, customer: customer,
+                        qty: qty, catatan: finalNote, status: "Belum Masuk", gateInTime: null,
+                        originalDate: null 
+                    };
+                } else {
+                    if (!groups[groupKey].dns.includes(dnNumber)) groups[groupKey].dns += `, ${dnNumber}`;
+                    if (snNumber && !groups[groupKey].sn.includes(snNumber)) groups[groupKey].sn += `, ${snNumber}`;
+                    groups[groupKey].qty += qty;
+                }
+            });
+
+            Object.values(groups).forEach(item => monitoringStore.push(item));
+            localStorage.setItem(KEY_MONITORING, JSON.stringify(monitoringStore));
+            
+            document.getElementById('p-bulk-data').value = "";
+            document.getElementById('p-bulk-catatan').value = ""; 
+            document.getElementById('p-bulk-vendor').value = "";
+            document.getElementById('p-bulk-area').value = ""; 
+            showPage('monitoring', 'Live Monitoring');
+        }
+
+        // --- MONITORING (LIST) ---
+        function updateMonitoring() {
+            const data = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            const q = document.getElementById('monSearch').value.toLowerCase();
+            const filterVal = document.getElementById('filterStatus').value;
+
+            let statTotal = 0, statBelumMasuk = 0, statGateIn = 0, statCancelled = 0, statTonase = 0;
+
+            const filteredForTable = data.filter(item => {
+                const allValues = Object.values(item).join(' ').toLowerCase();
+                const matchesSearch = allValues.includes(q);
+                let matchesStatus = true; 
+                if (filterVal !== "") {
+                    if (filterVal === 'Belum Masuk') matchesStatus = (item.status === 'Belum Masuk' || item.status === 'Planning' || item.status === 'BelumMasuk');
+                    else matchesStatus = (item.status === filterVal);
+                }
+                return matchesSearch && matchesStatus;
+            });
+
+            filteredForTable.forEach(item => {
+                statTotal++;
+                if(item.status !== 'Cancelled') statTonase += parseFloat(item.qty || 0);
+                if(item.status === 'Belum Masuk') statBelumMasuk++;
+                if(item.status === 'Gate In') statGateIn++;
+                if(item.status === 'Cancelled') statCancelled++;
+            });
+
+            document.getElementById('s-total').innerText = statTotal;
+            document.getElementById('s-planning').innerText = statBelumMasuk;
+            document.getElementById('s-gatein').innerText = statGateIn;
+            document.getElementById('s-cancelled').innerText = statCancelled;
+            document.getElementById('s-tonase').innerText = formatNumber(Math.round(statTonase));
+
+            const tableBody = document.getElementById('monTableBody');
+
+            if (filteredForTable.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="16" style="padding: 40px; text-align: center; color: #94a3b8;"><i class="fa-solid fa-clipboard-list" style="font-size:3rem; margin-bottom:10px;"></i><br>BELUM ADA DATA - SILAHKAN BUAT PLANNING</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = filteredForTable.map((item, idx) => {
+                let statusClass = 'status-planning'; 
+                if (item.status === 'Gate In') statusClass = 'status-gatein'; 
+                else if (item.status === 'Cancelled') statusClass = 'status-cancelled'; 
+                let vendorDisplay = item.vendor === "BELUM BOOKING" ? `<span style="color:#ef4444; font-weight:700;">BELUM BOOKING</span>` : item.vendor;
+                
+                let outstandingDesc = '-';
+                if (item.originalDate && item.originalDate !== item.date) {
+                    outstandingDesc = `<span class="text-outstanding">Outstanding ${item.originalDate}</span>`;
+                }
+
+                return `<tr><td><input type="checkbox" class="row-check" value="${item.id}" style="cursor:pointer;"></td><td>${idx + 1}</td><td style="font-weight:600;">${item.dns}</td><td>${item.sn || '-'}</td><td>${item.date}</td><td>${vendorDisplay}</td><td>${item.truck}</td><td>${item.area}</td><td>${item.city}</td><td>${item.customer}</td><td class="col-number">${formatNumber(Math.round(item.qty))}</td><td style="font-weight:600; color:#d97706;">${item.catatan || '-'}</td><td>${outstandingDesc}</td><td><span class="status-pill ${statusClass}">${item.status}</span></td><td><button class="btn-status-trigger btn btn-white" style="padding:4px 8px; font-size:0.7rem;" onclick="openStatusModal('${item.id}')">UPDATE STATUS</button></td><td><button class="btn-action btn-edit" onclick="editItem(${item.id})"><i class="fa-solid fa-pen"></i></button></td></tr>`;
+            }).join('');
+        }
+
+        function toggleAllChecks() {
+            const masterCheck = document.getElementById('check-all');
+            const rowChecks = document.querySelectorAll('.row-check');
+            rowChecks.forEach(cb => cb.checked = masterCheck.checked);
+        }
+
+        function processBulkMoveDate() {
+            const newDate = document.getElementById('bulk-move-date').value;
+            if (!newDate) { alert("Pilih tanggal baru terlebih dahulu!"); return; }
+            const checkedBoxes = document.querySelectorAll('.row-check:checked');
+            if (checkedBoxes.length === 0) { alert("Pilih minimal satu data (Checklist) untuk dipindah tanggalnya."); return; }
+            if (!confirm(`Yakin ingin memindahkan ${checkedBoxes.length} data terpilih ke tanggal ${newDate}?`)) return;
+
+            let data = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            const idsToUpdate = Array.from(checkedBoxes).map(cb => parseFloat(cb.value));
+
+            let updatedCount = 0;
+            data.forEach(item => {
+                if (idsToUpdate.includes(item.id)) {
+                    if (!item.originalDate) { item.originalDate = item.date; }
+                    item.date = newDate;
+                    updatedCount++;
+                }
+            });
+            localStorage.setItem(KEY_MONITORING, JSON.stringify(data));
+            document.getElementById('check-all').checked = false;
+            updateMonitoring();
+            alert(`${updatedCount} Data berhasil dipindah ke tanggal ${newDate}.`);
+        }
+        
+        function bulkDeleteMonitoring() {
+            const checkedBoxes = document.querySelectorAll('.row-check:checked');
+            if (checkedBoxes.length === 0) { alert("Pilih minimal satu data (Checklist) untuk dihapus."); return; }
+            if (!confirm(`PERINGATAN: Yakin ingin MENGHAPUS PERMANEN ${checkedBoxes.length} data terpilih?`)) return;
+            let data = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            const idsToDelete = Array.from(checkedBoxes).map(cb => parseFloat(cb.value));
+            const newData = data.filter(item => !idsToDelete.includes(item.id));
+            localStorage.setItem(KEY_MONITORING, JSON.stringify(newData));
+            document.getElementById('check-all').checked = false;
+            updateMonitoring(); 
+            alert("Data berhasil dihapus.");
+        }
+
+        // --- ANALYSIS LOGIC ---
+        function updateAnalysis() {
+            const data = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            const selectedDateInput = document.getElementById('analysis-date').value;
+            if(!selectedDateInput) return; 
+
+            const dateObj = new Date(selectedDateInput);
+            document.getElementById('analysis-date-display').innerText = `(${dateObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()})`;
+
+            const nextDateObj = new Date(selectedDateInput);
+            nextDateObj.setDate(nextDateObj.getDate() + 1);
+            const nextDateInput = nextDateObj.toISOString().split('T')[0];
+
+            const areas = ["JABODETABEK", "JAWA TENGAH", "JAWA TIMUR", "LUAR PULAU"];
+            const stats = {};
+            const selfPickup = { pUnit: 0, rUnit: 0, pQty: 0, rQty: 0 }; 
+            areas.forEach(a => { stats[a] = { tP:0, tR:0, tQP:0, tQR:0, t_trP:0, t_trR:0, t_tlP:0, t_tlR:0, t_coP:0, t_coR:0, nP:0, nR:0, nQP:0, nQR:0, nt_trP:0, nt_trR:0, nt_tlP:0, nt_tlR:0, nt_coP:0, nt_coR:0 }; });
+
+            data.forEach(item => {
+                if(item.status === 'Cancelled') return;
+                const area = item.area;
+                const qty = parseFloat(item.qty || 0);
+                const isRealz = (item.status === 'Gate In');
+                const t = (item.truck || "").toLowerCase();
+                let isToday = (item.date === selectedDateInput);
+                let isNext = (item.date === nextDateInput);
+                let markedNextDay = (item.catatan && item.catatan.toUpperCase().includes("NEXT DAY"));
+
+                if(!isToday && !isNext) return;
+                if (area === "AMBIL SENDIRI") {
+                    if (isToday) { selfPickup.pUnit++; selfPickup.pQty += qty; if (isRealz) { selfPickup.rUnit++; selfPickup.rQty += qty; } }
+                    return;
+                }
+                if (stats[area]) {
+                    if (isToday && !markedNextDay) {
+                        stats[area].tP++; stats[area].tQP += qty;
+                        if (isRealz) { stats[area].tR++; stats[area].tQR += qty; }
+                        if (t.includes('tronton')) { stats[area].t_trP++; if(isRealz) stats[area].t_trR++; }
+                        else if (t.includes('trailer')) { stats[area].t_tlP++; if(isRealz) stats[area].t_tlR++; }
+                        else if (t.includes('cont') || t.includes('40') || t.includes('20')) { stats[area].t_coP++; if(isRealz) stats[area].t_coR++; }
+                    }
+                    else if ((isToday && markedNextDay) || isNext) {
+                        stats[area].nP++; stats[area].nQP += qty;
+                        if (isRealz) { stats[area].nR++; stats[area].nQR += qty; }
+                        if (t.includes('tronton')) { stats[area].nt_trP++; if(isRealz) stats[area].nt_trR++; }
+                        else if (t.includes('trailer')) { stats[area].nt_tlP++; if(isRealz) stats[area].nt_tlR++; }
+                        else if (t.includes('cont') || t.includes('40') || t.includes('20')) { stats[area].nt_coP++; if(isRealz) stats[area].nt_coR++; }
+                    }
+                }
+            });
+
+            // Helper: BOLD numbers only for Total/Realization/Gap
+            const b = (val) => `<span style="font-weight:800;">${val}</span>`;
+            
+            const renderSimple = (id, mode) => {
+                let sumP = 0, sumR = 0;
+                let html = areas.map(a => {
+                    let p, r;
+                    if (mode === 'today') { p = stats[a].tP; r = stats[a].tR; }
+                    else if (mode === 'next') { p = stats[a].nP; r = stats[a].nR; }
+                    else { p = stats[a].tP + stats[a].nP; r = stats[a].tR + stats[a].nR; }
+                    sumP += p; sumR += r;
+                    let gap = p - r; let gapDisplay = gap > 0 ? `-${gap}` : gap; 
+                    return `<tr><td style="text-align:left; padding-left:10px; font-weight:700;">${a}</td><td>${b(p)}</td><td>${b(r)}</td><td class="${gap > 0 ? 'gap-alert' : 'gap-safe'}">${b(gapDisplay)}</td></tr>`;
+                }).join('');
+                let totalGap = sumP - sumR; let totalGapDisplay = totalGap > 0 ? `-${totalGap}` : totalGap;
+                html += `<tr class="row-total" style="background:#f1f5f9; border-top:2px solid #cbd5e1;"><td>TOTAL</td><td>${b(sumP)}</td><td>${b(sumR)}</td><td class="${totalGap > 0 ? 'gap-alert' : 'gap-safe'}">${b(totalGapDisplay)}</td></tr>`;
+                document.getElementById(id).innerHTML = html;
+            };
+            renderSimple('body-plan-today', 'today'); renderSimple('body-next-day', 'next'); renderSimple('body-summary', 'summary');
+
+            const renderBreakdown = (targetId, type) => {
+                let total = { trP:0, trR:0, tlP:0, tlR:0, coP:0, coR:0, qP:0, qR:0 };
+                let html = areas.map(a => {
+                    let d = {};
+                    if (type === 'today') d = { trP: stats[a].t_trP, trR: stats[a].t_trR, tlP: stats[a].t_tlP, tlR: stats[a].t_tlR, coP: stats[a].t_coP, coR: stats[a].t_coR, qP: stats[a].tQP, qR: stats[a].tQR };
+                    else if (type === 'next') d = { trP: stats[a].nt_trP, trR: stats[a].nt_trR, tlP: stats[a].nt_tlP, tlR: stats[a].nt_tlR, coP: stats[a].nt_coP, coR: stats[a].nt_coR, qP: stats[a].nQP, qR: stats[a].nQR };
+                    else if (type === 'sum') d = { trP: stats[a].t_trP + stats[a].nt_trP, trR: stats[a].t_trR + stats[a].nt_trR, tlP: stats[a].t_tlP + stats[a].nt_tlP, tlR: stats[a].t_tlR + stats[a].nt_tlR, coP: stats[a].t_coP + stats[a].nt_coP, coR: stats[a].t_coR + stats[a].nt_coR, qP: stats[a].tQP + stats[a].nQP, qR: stats[a].tQR + stats[a].nQR };
+                    total.trP += d.trP; total.trR += d.trR; total.tlP += d.tlP; total.tlR += d.tlR; total.coP += d.coP; total.coR += d.coR; total.qP += d.qP; total.qR += d.qR;
+                    const gTr = d.trP - d.trR; const gTl = d.tlP - d.tlR; const gCo = d.coP - d.coR; const gQ = d.qP - d.qR;
+                    return `<tr><td style="text-align:left; padding-left:10px; font-weight:700;">${a}</td><td>${d.trP}</td><td style="font-weight:bold;">${d.trR}</td><td class="${gTr > 0 ? 'gap-alert' : 'gap-safe'}">${gTr > 0 ? `-${gTr}` : gTr}</td><td>${d.tlP}</td><td style="font-weight:bold;">${d.tlR}</td><td class="${gTl > 0 ? 'gap-alert' : 'gap-safe'}">${gTl > 0 ? `-${gTl}` : gTl}</td><td>${d.coP}</td><td style="font-weight:bold;">${d.coR}</td><td class="${gCo > 0 ? 'gap-alert' : 'gap-safe'}">${gCo > 0 ? `-${gCo}` : gCo}</td><td>${formatNumber(Math.round(d.qP))}</td><td style="font-weight:bold;">${formatNumber(Math.round(d.qR))}</td><td class="${gQ > 1 ? 'gap-alert' : 'gap-safe'}">${gQ > 1 ? `-${formatNumber(Math.round(gQ))}` : formatNumber(Math.round(gQ))}</td></tr>`;
+                }).join('');
+                const gtTr = total.trP - total.trR; const gtTl = total.tlP - total.tlR; const gtCo = total.coP - total.coR; const gtQ = total.qP - total.qR;
+                html += `<tr class="row-total" style="background:#f1f5f9; border-top:2px solid #cbd5e1; font-weight:800;"><td>TOTAL</td><td>${total.trP}</td><td>${total.trR}</td><td class="${gtTr > 0 ? 'gap-alert' : 'gap-safe'}">${gtTr > 0 ? `-${gtTr}` : gtTr}</td><td>${total.tlP}</td><td>${total.tlR}</td><td class="${gtTl > 0 ? 'gap-alert' : 'gap-safe'}">${gtTl > 0 ? `-${gtTl}` : gtTl}</td><td>${total.coP}</td><td>${total.coR}</td><td class="${gtCo > 0 ? 'gap-alert' : 'gap-safe'}">${gtCo > 0 ? `-${gtCo}` : gtCo}</td><td>${formatNumber(Math.round(total.qP))}</td><td>${formatNumber(Math.round(total.qR))}</td><td class="${gtQ > 1 ? 'gap-alert' : 'gap-safe'}">${gtQ > 1 ? `-${formatNumber(Math.round(gtQ))}` : formatNumber(Math.round(gtQ))}</td></tr>`;
+                document.getElementById(targetId).innerHTML = html;
+            };
+            renderBreakdown('body-breakdown-today', 'today'); renderBreakdown('body-breakdown-next', 'next'); renderBreakdown('body-breakdown-summary', 'sum');
+
+            let gapUnit = selfPickup.pUnit - selfPickup.rUnit;
+            document.getElementById('body-ambil-sendiri').innerHTML = `<tr><th style="width:40%;">PRODUK</th><th>PLAN</th><th>REALISASI</th><th>GAP</th></tr><tr><td style="text-align:left; padding-left:10px; font-weight:bold;">BROWN</td><td>${b(selfPickup.pUnit)}</td><td style="font-weight:bold;">${b(selfPickup.rUnit)}</td><td class="${gapUnit > 0 ? 'gap-alert' : 'gap-safe'}">${b(gapUnit > 0 ? `-${gapUnit}` : gapUnit)}</td></tr>`;
+        }
+
+        // --- STATUS MODAL & HELPERS ---
+        function openStatusModal(id) {
+            let data = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            let item = data.find(d => d.id == id); 
+            if(!item) return;
+            document.getElementById('status-update-id').value = item.id;
+            document.getElementById('st-dn').innerText = item.dns;
+            document.getElementById('st-vendor').innerText = item.vendor;
+            document.getElementById('st-customer').innerText = `${item.customer} - ${item.city}`;
+            document.getElementById('statusModalOverlay').classList.add('active');
+        }
+        function closeStatusModal() { document.getElementById('statusModalOverlay').classList.remove('active'); }
+        function executeStatusUpdate(newStatus) { changeStatus(parseFloat(document.getElementById('status-update-id').value), newStatus); closeStatusModal(); }
+        function changeStatus(id, newStatus) {
+            let monitoringData = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            let idx = monitoringData.findIndex(d => d.id === id);
+            if(idx !== -1) { 
+                const oldStatus = monitoringData[idx].status;
+                monitoringData[idx].status = newStatus; 
+                if (newStatus === 'Gate In' && oldStatus !== 'Gate In') {
+                    const now = new Date();
+                    monitoringData[idx].gateInTime = now.toLocaleString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\./g, ':');
+                    let historyData = JSON.parse(localStorage.getItem(KEY_HISTORY)) || [];
+                    if(!historyData.find(h => h.sourceId === monitoringData[idx].id)) {
+                        historyData.push({ ...monitoringData[idx], sourceId: monitoringData[idx].id, id: Date.now() + Math.random() });
+                        localStorage.setItem(KEY_HISTORY, JSON.stringify(historyData));
+                    }
+                } else if (newStatus !== 'Gate In') monitoringData[idx].gateInTime = null;
+                localStorage.setItem(KEY_MONITORING, JSON.stringify(monitoringData)); 
+                updateMonitoring(); 
+            }
+        }
+
+        function renderHistory() {
+            const data = JSON.parse(localStorage.getItem(KEY_HISTORY)) || [];
+            const q = document.getElementById('histSearch').value.toLowerCase();
+            const start = document.getElementById('hist-start').value;
+            const end = document.getElementById('hist-end').value;
+            
+            const filtered = data.filter(d => {
+                const allValues = Object.values(d).join(' ').toLowerCase();
+                const matchesSearch = allValues.includes(q);
+                let inRange = true;
+                if (start && end) inRange = d.date >= start && d.date <= end;
+                return matchesSearch && inRange;
+            });
+            
+            const tbody = document.getElementById('histTableBody');
+            if(filtered.length === 0) { 
+                tbody.innerHTML = '<tr><td colspan="14" style="padding:20px; color:#64748b; font-style:italic; text-align:center;">Tidak ada data history pada periode ini.</td></tr>'; 
+                return; 
+            }
+            
+            tbody.innerHTML = filtered.map((item, index) => {
+                let outstandingDesc = '-';
+                if (item.originalDate && item.originalDate !== item.date) {
+                    outstandingDesc = `<span class="text-outstanding">Outstanding dari<br>${item.originalDate}</span>`;
+                }
+                return `<tr><td><input type="checkbox" class="hist-check" value="${item.id}" style="cursor:pointer;"></td><td>${index + 1}</td><td>${item.dns}</td><td>${item.sn || '-'}</td><td>${item.date}</td><td>${item.vendor}</td><td>${item.truck || '-'}</td><td>${item.area}</td><td>${item.city}</td><td>${item.customer}</td><td class="col-number">${formatNumber(item.qty)}</td><td style="color:#d97706; font-weight:600;">${item.catatan || '-'}</td><td>${outstandingDesc}</td><td style="color:#0f172a; font-weight:600;">${item.gateInTime || '-'}</td></tr>`
+            }).join('');
+        }
+
+        function exportHistoryExcel() {
+            const table = document.getElementById('table-history-data');
+            // Clone to not affect current view, ensure numbers are bold in Excel
+            const clone = table.cloneNode(true);
+            const qtyCells = clone.querySelectorAll('td:nth-child(11)');
+            qtyCells.forEach(cell => { cell.style.fontWeight = "bold"; cell.style.textAlign = "right"; });
+            
+            const html = clone.outerHTML;
+            const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+            const link = document.createElement('a');
+            link.download = `HISTORY_GATEIN_${document.getElementById('hist-start').value || 'ALL'}_sd_${document.getElementById('hist-end').value || 'ALL'}.xls`;
+            link.href = url; link.click();
+        }
+
+        function bulkDeleteHistory() {
+            const checkedBoxes = document.querySelectorAll('.hist-check:checked');
+            if (checkedBoxes.length === 0) { alert("Pilih data history yang akan dihapus."); return; }
+            if (!confirm(`PERINGATAN: Yakin ingin MENGHAPUS PERMANEN ${checkedBoxes.length} data history ini?`)) return;
+            let data = JSON.parse(localStorage.getItem(KEY_HISTORY)) || [];
+            const idsToDelete = Array.from(checkedBoxes).map(cb => parseFloat(cb.value));
+            const newData = data.filter(d => !idsToDelete.includes(d.id));
+            localStorage.setItem(KEY_HISTORY, JSON.stringify(newData));
+            document.getElementById('hist-check-all').checked = false;
+            renderHistory();
+            alert("Data history berhasil dihapus.");
+        }
+
+        function editItem(id) {
+            let data = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            let item = data.find(d => d.id === id);
+            if (!item) return;
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('edit-dn').value = item.dns;
+            document.getElementById('edit-sn').value = item.sn || ""; 
+            document.getElementById('edit-customer').value = item.customer;
+            document.getElementById('edit-city').value = item.city;
+            document.getElementById('edit-area').value = item.area;
+            document.getElementById('edit-vendor').value = item.vendor;
+            document.getElementById('edit-truck').value = item.truck;
+            document.getElementById('edit-qty').value = item.qty;
+            document.getElementById('edit-catatan').value = item.catatan || ''; 
+            document.getElementById('editModalOverlay').classList.add('active');
+        }
+        function closeEditModal() { document.getElementById('editModalOverlay').classList.remove('active'); }
+        function saveEditData() {
+            const id = parseFloat(document.getElementById('edit-id').value);
+            let data = JSON.parse(localStorage.getItem(KEY_MONITORING)) || [];
+            let idx = data.findIndex(d => d.id === id);
+            if (idx !== -1) {
+                data[idx].dns = document.getElementById('edit-dn').value;
+                data[idx].sn = document.getElementById('edit-sn').value; 
+                data[idx].customer = document.getElementById('edit-customer').value;
+                data[idx].city = document.getElementById('edit-city').value;
+                data[idx].area = document.getElementById('edit-area').value;
+                data[idx].vendor = document.getElementById('edit-vendor').value;
+                data[idx].truck = document.getElementById('edit-truck').value;
+                data[idx].qty = parseFloat(document.getElementById('edit-qty').value || 0);
+                data[idx].catatan = document.getElementById('edit-catatan').value; 
+                if(data[idx].vendor && !historyVendors.includes(data[idx].vendor)) {
+                    historyVendors.push(data[idx].vendor); localStorage.setItem('indeco_history_vendors', JSON.stringify(historyVendors));
+                }
+                if(data[idx].catatan && !historyNotes.includes(data[idx].catatan)) {
+                    historyNotes.push(data[idx].catatan); localStorage.setItem('indeco_history_notes', JSON.stringify(historyNotes));
+                }
+                updateDatalists();
+                localStorage.setItem(KEY_MONITORING, JSON.stringify(data));
+                updateMonitoring(); closeEditModal();
+            }
+        }
+
+        function exportGapImage() { 
+            const container = document.getElementById('exportAreaContainer');
+            const originalShadow = container.style.boxShadow;
+            container.style.boxShadow = 'none';
+            container.style.padding = '40px'; 
+
+            html2canvas(container, { scale: 2 }).then(canvas => { 
+                const link = document.createElement('a');
+                link.download = 'ANALISIS_LOGISTIK_INDECO.jpg';
+                link.href = canvas.toDataURL('image/jpeg', 1.0);
+                link.click(); 
+                
+                container.style.boxShadow = originalShadow;
+                container.style.padding = '25px';
+            }); 
+        }
+
+        function exportToExcel() {
+            const table = document.getElementById('dn-table-excel');
+            const clone = table.cloneNode(true);
+            const headers = clone.querySelectorAll('th');
+            headers.forEach(th => {
+                th.style.backgroundColor = "#0f172a"; 
+                th.style.color = "#ffffff";
+                th.style.border = "1px solid #000000";
+            });
+
+            const cells = clone.querySelectorAll('td');
+            cells.forEach(td => {
+                td.style.border = "1px solid #000000"; 
+                if(td.classList.contains('col-number')) {
+                    td.style.textAlign = 'right';
+                    td.style.fontWeight = 'bold';
+                }
+            });
+
+            const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(clone.outerHTML);
+            const link = document.createElement('a');
+            link.download = 'DATA_DN_LOGISTIK_MONITORING.xls';
+            link.href = url; link.click();
+        }
+
+        function exportTableToImage() {
+            const originalTable = document.getElementById('dn-table-excel');
+            const filterVal = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : "";
+            let subTitleText = filterVal ? `STATUS : ${filterVal.toUpperCase()}` : "SEMUA STATUS";
+            
+            const wrapper = document.createElement('div');
+            wrapper.style.position = "fixed"; wrapper.style.left = "-10000px"; wrapper.style.top = "0"; wrapper.style.zIndex = "9999";
+            wrapper.style.backgroundColor = "#ffffff"; wrapper.style.padding = "50px"; wrapper.style.width = "1400px"; wrapper.style.fontFamily = "'Inter', sans-serif";
+            document.body.appendChild(wrapper);
+            
+            const headerBox = document.createElement('div');
+            headerBox.style.borderBottom = "4px solid #0f172a";
+            headerBox.style.paddingBottom = "20px";
+            headerBox.style.marginBottom = "20px";
+            headerBox.innerHTML = `
+                <h1 style="margin:0; color:#0f172a; font-size:24px;">DATA MONITORING DELIVERY</h1>
+                <h3 style="margin:5px 0 0 0; color:#64748b; font-size:16px;">${subTitleText}</h3>
+                <p style="margin:5px 0 0 0; color:#94a3b8; font-size:12px;">Generated by InDeCo System</p>
+            `;
+            wrapper.appendChild(headerBox);
+            
+            const tableClone = originalTable.cloneNode(true);
+            tableClone.removeAttribute('id'); tableClone.style.width = "100%"; tableClone.style.borderCollapse = "collapse"; 
+            
+            const thead = tableClone.querySelector('thead'); if (thead) thead.style.display = "table-header-group"; 
+            const headers = tableClone.querySelectorAll('th');
+            headers.forEach(th => { 
+                th.style.backgroundColor = "#0f172a"; 
+                th.style.color = "#ffffff"; 
+                th.style.padding = "10px"; 
+                th.style.border = "1px solid #cbd5e1"; 
+                th.style.fontSize = "12px"; 
+                if(th.innerText === "" || th.innerText === "Action" || th.innerText === "Edit") th.style.display = "none";
+            });
+            
+            const allRows = tableClone.querySelectorAll('tr');
+            allRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                cells.forEach((td, index) => { 
+                    td.style.border = "1px solid #e2e8f0"; 
+                    td.style.padding = "8px"; 
+                    td.style.fontSize = "12px"; 
+                    td.style.color = "#334155";
+                    if(index === 0 || index >= cells.length - 2) td.style.display = "none";
+                });
+            });
+            
+            wrapper.appendChild(tableClone);
+            
+            setTimeout(() => {
+                html2canvas(wrapper, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `LAPORAN_${subTitleText.replace(/\s|:/g, '_')}.jpg`;
+                    link.href = canvas.toDataURL('image/jpeg', 0.9);
+                    link.click();
+                    document.body.removeChild(wrapper);
+                });
+            }, 100); 
+        }
+
+        function toggleAllHistory(source) {
+            const checkboxes = document.querySelectorAll('.hist-check');
+            checkboxes.forEach(c => c.checked = source.checked);
+        }
+
+        // --- CHECK LOGIN ON LOAD (DIPERBAIKI) ---
+        window.onload = () => {
+            const loginStatus = localStorage.getItem(KEY_LOGIN_STATUS);
+
+            if (loginStatus === 'true') {
+                document.body.setAttribute('data-logged-in', 'true');
+                // PERBAIKAN: Login page sudah hidden by default (CSS), jadi tidak perlu disembunyikan lagi
+                // document.getElementById('login-page').style.display = 'none'; 
+                document.getElementById('app-container').classList.add('active');
+                
+                // Init data
+                const today = new Date().toISOString().split('T')[0];
+                const dateInput = document.getElementById('p-bulk-date');
+                if(dateInput && !dateInput.value) dateInput.value = today;
+
+                updateDatalists();
+                
+                // Load last active page
+                const lastPage = localStorage.getItem(KEY_LAST_PAGE) || 'dashboard';
+                const menu = document.getElementById('menu-' + lastPage);
+                const label = menu ? menu.getAttribute('data-tooltip') : 'Dashboard';
+                showPage(lastPage, label);
+            } else {
+                // PERBAIKAN: Jika belum login, baru kita munculkan login page (Flex)
+                document.getElementById('login-page').style.display = 'flex';
+            }
+        };
+    </script>
+</body>
+</html>
