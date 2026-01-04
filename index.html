@@ -1906,5 +1906,37 @@
             }
         };
     </script>
+    <!-- Firebase SDK (WAJIB) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBV4VKm92EuBzUJiayXwUrHZesuzcB8w3M",
+    authDomain: "dashboard-indeco.firebaseapp.com",
+    projectId: "dashboard-indeco",
+    storageBucket: "dashboard-indeco.firebasestorage.app",
+    messagingSenderId: "468480005110",
+    appId: "1:468480005110:web:ddf9abad16900c2cd76dd7"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+</script>
+<script>
+function attemptLogin() {
+  const email = document.getElementById("login-username").value;
+  const password = document.getElementById("login-password").value;
+
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      window.location.href = "dashboard.html";
+    })
+    .catch(error => {
+      alert("Login gagal: " + error.message);
+    });
+}
+</script>
+
 </body>
 </html>
